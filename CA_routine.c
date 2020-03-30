@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 #define GENERATION 10
 #define DEFAULT_SIZE 10
@@ -31,9 +32,14 @@ int *cells;
  */
 void initialize() {
 
+    srand(time(0));
     for (int x = 0; x < ROWS; x++) {
         for (int y = 0; y < COLS; y++) {
-               *(cells + x*COLS + y) = (rand() % (11 - 10 + 1) + 10) - 10;  
+               if (x == ROWS-1 || x == 0 || y == 0 || y == COLS-1) {
+                   *(cells + x*COLS + y) = 1;
+               } else {
+                   *(cells + x*COLS + y) = (rand() % (11 - 10 + 1) + 10) - 10;  
+               }
         }
     }
 
@@ -41,9 +47,14 @@ void initialize() {
 
 /*
 // TODO: COMPUTE NEXT GENERATION OF CELL
-int[][] update() {
+void update() {
 
-    int next_step[SIZE][SIZE] = new int[SIZE][SIZE];
+
+    // step 1: select cell randomly
+    // step 2: determine from transition rule if cell can move
+    // step 3: if it can move, add it to queue *dont actually move it yet*
+    // step 4: select cell randomly from queue and do the actual transition
+
 
     for (int i = 0; i < SIZE; i++) {
         for (int j = 0; j < SIZE; j++) {
@@ -99,7 +110,7 @@ int main(int argc, char* argv[])
     initialize();
 
     // max number of timesteps to run for.
-    int timestep = 100;
+    int timestep = 20;
     
     while (timestep > 0) {
    
