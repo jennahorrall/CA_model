@@ -21,51 +21,35 @@
 int ROWS;
 int COLS;
 
+int MAX_ROWS;
+int MAX_COLS;
+
 /*matrix*/
 int *cells;
 
 
 /*
- * Randomly generate a matrix of SIZE x SIZE.
+ * Randomly generate a matrix of ROWS x COLS.
  * Each cell has two possible states: 0 (inactive) or 1 (active).
  *
  */
 void initialize() {
 
     srand(time(0));
-    for (int x = 0; x < ROWS; x++) {
-        for (int y = 0; y < COLS; y++) {
-               if (x == ROWS-1 || x == 0 || y == 0 || y == COLS-1) {
-                   *(cells + x*COLS + y) = 1;
+    for (int x = 0; x < MAX_ROWS; x++) {
+        for (int y = 0; y < MAX_COLS; y++) {
+               // set to outer layer to all 1's to account for border cell transitions
+               if (x == ROWS+1 || x == 0 || y == 0 || y == COLS+1) {
+                   *(cells + x*(COLS+2) + y) = 26;
                } else {
-                   *(cells + x*COLS + y) = (rand() % (11 - 10 + 1) + 10) - 10;  
+                   *(cells + x*(COLS+2) + y) = (rand() % (11 - 10 + 1) + 10) - 10;  
                }
         }
     }
 
 }
 
-/*
-// TODO: COMPUTE NEXT GENERATION OF CELL
-void update() {
 
-
-    // step 1: select cell randomly
-    // step 2: determine from transition rule if cell can move
-    // step 3: if it can move, add it to queue *dont actually move it yet*
-    // step 4: select cell randomly from queue and do the actual transition
-
-
-    for (int i = 0; i < SIZE; i++) {
-        for (int j = 0; j < SIZE; j++) {
-            next_step[i][j] = check_neighbors(
-    
-        }
-
-    }
-
-
-}
 */
 
 /*
@@ -74,9 +58,9 @@ void update() {
 void print_cellspace() {
 
     printf("\n");
-    for (int x = 0; x < ROWS; x++) {
-        for (int y = 0; y < COLS; y++) {
-            printf(" %d ", *(cells + x*COLS + y)) ;
+    for (int x = 1; x < MAX_ROWS-1; x++) {
+        for (int y = 1; y < MAX_COLS-1; y++) {
+            printf(" %d ", *(cells + x*(MAX_COLS) + y)) ;
        }
     printf("\n");
     }
@@ -96,7 +80,7 @@ int main(int argc, char* argv[])
         printf("Usage: ./ca_model <rows> <cols>\n");
         exit(EXIT_FAILURE);
     }
-    
+   
     ROWS = atoi(argv[1]);
     COLS = atoi(argv[2]);
 
@@ -105,7 +89,11 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    cells = (int*) calloc((ROWS * COLS), sizeof(int));
+    /* set max rows/cols for ghost border */
+    MAX_ROWS=ROWS+2;
+    MAX_COLS=COLS+2;
+
+    cells = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
 
     initialize();
 
@@ -114,7 +102,11 @@ int main(int argc, char* argv[])
     
     while (timestep > 0) {
    
-       //update();
+       // step 1: select cell randomly (# between 1 and MAX_ROWS-1)
+       // step 2: determine from transition rule if cell can move using another function
+       // step 3: if it can move, add it to queue *dont actually move it yet*
+       // step 4: select cell randomly from queue and do the actual transition
+
 
        // print cellspace every 10 timesteps.
        if (timestep % 10 == 0) {
