@@ -50,7 +50,7 @@ void initialize() {
 }
 
 
-*/
+
 
 /*
  * Print the cellspace.
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     while (timestep > 0) {
    
        // step 1: select cell randomly (# between 1 and MAX_ROWS-1)
-       // step 2: determine from transition rule if cell can move using another function
+       // step 2: determine from transition rule if cell can move using another function - transition()
        // step 3: if it can move, add it to queue *dont actually move it yet*
        // step 4: select cell randomly from queue and do the actual transition
 
