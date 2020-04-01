@@ -31,6 +31,8 @@ int *cells;
 /*
  * Randomly generate a matrix of ROWS x COLS.
  * Each cell has two possible states: 0 (inactive) or 1 (active).
+ * 
+ * (this can be parallelized)
  *
  */
 void initialize() {
@@ -40,7 +42,7 @@ void initialize() {
         for (int y = 0; y < MAX_COLS; y++) {
                // set to outer layer to all 1's to account for border cell transitions
                if (x == ROWS+1 || x == 0 || y == 0 || y == COLS+1) {
-                   *(cells + x*(COLS+2) + y) = 26;
+                   *(cells + x*(COLS+2) + y) = 1;
                } else {
                    *(cells + x*(COLS+2) + y) = (rand() % (11 - 10 + 1) + 10) - 10;  
                }
@@ -54,6 +56,9 @@ void initialize() {
 
 /*
  * Print the cellspace.
+ *
+ * Notice the for loop is from [1, maxrows-1]:
+ * this is because of the ghost border.
  */
 void print_cellspace() {
 
@@ -97,7 +102,7 @@ int main(int argc, char* argv[])
 
     initialize();
 
-    // max number of timesteps to run for.
+    // max number of timesteps to run for
     int timestep = 20;
     
     while (timestep > 0) {
