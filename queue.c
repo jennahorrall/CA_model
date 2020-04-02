@@ -1,25 +1,8 @@
+#include "queue.h"
+
 /* 
-* I will add the .h file and stuff tomorrow! 
-*
 * Queue Implementation 
 */
-
-// node structure 
-struct node {
-    int value;
-    struct node *next;
-};
-typedef struct node node;
-
-// queue structure 
-struct queue {
-
-    int node_count;
-    node *front;
-    node *rear;
-
-};
-typedef struct queue queue;
 
 // creating a queue 
 struct queue* initialize_queue()
