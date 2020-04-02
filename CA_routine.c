@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include "queue.h"
 
 #define GENERATION 10
 #define DEFAULT_SIZE 10
