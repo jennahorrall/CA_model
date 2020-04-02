@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdbool.h>
 
 #define GENERATION 10
 #define DEFAULT_SIZE 10
@@ -27,6 +28,7 @@ int MAX_COLS;
 /*matrix*/
 int *cells;
 
+bool transition(int, int);
 
 /*
  * Randomly generate a matrix of ROWS x COLS.
@@ -51,6 +53,29 @@ void initialize() {
 
 }
 
+
+/*
+ * Returns true if a cell (x,y) in the cells matrix would survive to the next transition.
+ *     Doesn't currently adjust any border cells.
+ *
+ */
+bool transition(int x, int y) {
+	int livingNeighbors = 0;
+	for (int nRows = x - 1; nRows <= x + 1; nRows++) {     //Count Living Neighbors
+	    for (int nCols = y - 1; nCols <= y + 1; nCols++) {
+		if (*(cells + nRows*MAX_COLS + nCols) == 1) { 
+		    livingNeighbors++;
+		}
+	    }
+	}
+
+	if (*(cells + x*MAX_COLS + y) == 1) {           //Decide if cell will live or perish
+	    return (livingNeighbors == 2 || livingNeighbors == 3);
+	} else {
+	    return (livingNeighbors == 3);
+	}
+
+}
 
 
 
@@ -107,11 +132,31 @@ int main(int argc, char* argv[])
     
     while (timestep > 0) {
    
-       // step 1: select cell randomly (# between 1 and MAX_ROWS-1)
-       // step 2: determine from transition rule if cell can move using another function - transition()
-       // step 3: if it can move, add it to queue *dont actually move it yet*
-       // step 4: select cell randomly from queue and do the actual transition
+       // STEP 1: select cell randomly (# between 1 and MAX_ROWS-1)
+		// (not currently random, starting out in row major order)
+       
+       for (int i = 1; i < MAX_ROWS-1; i++) {
+           for (int j = 1; j < MAX_COLS-1; j++) {
+       
+               // STEP 2: determine from transition rule if cell can move using another function - transition()
+               if (transition(i,j)) {
+	 
+	           // STEP 3: if it can move, add it to queue *dont actually move it yet*
+ 		   // queue.enqueue(*(cells + x*MAX_COLS +y));
+	       } 
+           }
+       }
 
+
+       //STEP 4: select cell randomly from queue and do the actual transition
+               // (this is kinda confusing, how de we select from queue randomly, dont we have to pop the front?)
+               // Here is psuedocode for now
+       /*
+       while (queue is not empty) {
+	   cell = queue.dequeue;
+           move cell;
+       }
+       */
 
        // print cellspace every 10 timesteps.
        if (timestep % 10 == 0) {
