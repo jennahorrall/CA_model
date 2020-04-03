@@ -2,8 +2,10 @@
  *
  * Main Cellular Automata Function.
  *
- * Source: The Nature of Code, Daniel Shiffman.
- * Link: https://natureofcode.com/book/chapter-7-cellular-automata/
+ * Acknowledgements:
+ * Game of Life transitions - https://natureofcode.com/book/chapter-7-cellular-automata/
+ * 
+ * Dr. Lam: file "timer.h", also used in p3 to calculate runtimes for specific code segments.
  *
  * Implemented by Paul Bailey, Callan Hand, Jenna Horrall to 
  * model a stochastic sand dune model similar to ReSCAL.
@@ -17,8 +19,7 @@
 #include <stdbool.h>
 #include "queue.h"
 
-#define GENERATION 10
-#define DEFAULT_SIZE 10
+#include "timer.h"
 
 int ROWS;
 int COLS;
@@ -26,16 +27,17 @@ int COLS;
 int MAX_ROWS;
 int MAX_COLS;
 
-/*matrix*/
+/*global matrix*/
 int *cells;
 
+void initialize();
 bool transition(int, int);
+void print_cellspace(int*, int);
 
 /*
- * Randomly generate a matrix of ROWS x COLS.
+ * Randomly generate a matrix of MAX_ROWS x MAX_COLS.
  * Each cell has two possible states: 0 (inactive) or 1 (active).
  * 
- * (this can be parallelized)
  *
  */
 void initialize() {
@@ -61,7 +63,9 @@ void initialize() {
  *
  */
 bool transition(int x, int y) {
+
 	int livingNeighbors = 0;
+
 	for (int nRows = x - 1; nRows <= x + 1; nRows++) {     //Count Living Neighbors
 	    for (int nCols = y - 1; nCols <= y + 1; nCols++) {
 		if (*(cells + nRows*MAX_COLS + nCols) == 1) { 
@@ -69,6 +73,8 @@ bool transition(int x, int y) {
 		}
 	    }
 	}
+
+        // do you have to subtract the actual cell?
 
 	if (*(cells + x*MAX_COLS + y) == 1) {           //Decide if cell will live or perish
 	    return (livingNeighbors == 2 || livingNeighbors == 3);
@@ -86,12 +92,12 @@ bool transition(int x, int y) {
  * Notice the for loop is from [1, maxrows-1]:
  * this is because of the ghost border.
  */
-void print_cellspace() {
+void print_cellspace(int* p, int timestep) {
 
-    printf("\n");
+    printf("TIMESTEP # %d\n", timestep);
     for (int x = 1; x < MAX_ROWS-1; x++) {
         for (int y = 1; y < MAX_COLS-1; y++) {
-            printf(" %d ", *(cells + x*(MAX_COLS) + y)) ;
+            printf(" %d ", *(p + x*(MAX_COLS) + y)) ;
        }
     printf("\n");
     }
@@ -126,47 +132,39 @@ int main(int argc, char* argv[])
 
     cells = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
 
+    int timestep = 0;
+    int* next_transition = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
+
+    START_TIMER(ca);
     initialize();
 
-    // max number of timesteps to run for
-    int timestep = 20;
-    
-    while (timestep > 0) {
-   
-       // STEP 1: select cell randomly (# between 1 and MAX_ROWS-1)
-		// (not currently random, starting out in row major order)
-       
+    // loop for 50 time steps
+    while (timestep <= 50) {
+ 
        for (int i = 1; i < MAX_ROWS-1; i++) {
-           for (int j = 1; j < MAX_COLS-1; j++) {
-       
-               // STEP 2: determine from transition rule if cell can move using another function - transition()
+           for (int j = 1; j < MAX_COLS-1; j++) {       
+               // if cell can move, perform transition else keep previous value
                if (transition(i,j)) {
-	 
-	           // STEP 3: if it can move, add it to queue *dont actually move it yet*
- 		   // queue.enqueue(*(cells + x*MAX_COLS +y));
-	       } 
+                   *(next_transition + i*(MAX_COLS) + j) = 1;
+	       } else {
+                   *(next_transition + i*(MAX_COLS) + j) = *(cells + i*(MAX_COLS) + j);
+               }
            }
        }
-
-
-       //STEP 4: select cell randomly from queue and do the actual transition
-               // (this is kinda confusing, how de we select from queue randomly, dont we have to pop the front?)
-               // Here is psuedocode for now
-       /*
-       while (queue is not empty) {
-	   cell = queue.dequeue;
-           move cell;
-       }
-       */
+       cells = next_transition;
 
        // print cellspace every 10 timesteps.
        if (timestep % 10 == 0) {
-           print_cellspace();
+           //print_cellspace(cells, timestep);
        }
-       timestep--;
-    }
+       timestep++;
 
+    }
+    STOP_TIMER(ca);
+
+    printf("time for serial program: %4.4fs\n", GET_TIMER(ca));
     free(cells);
+
     return (EXIT_SUCCESS);
 }
 
