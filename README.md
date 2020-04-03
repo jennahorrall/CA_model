@@ -29,6 +29,12 @@ And then run the executable labeled ca_model:
 
 Where the first argument is the number of rows and the second argument is the number of columns.
 
+Run the run.sh file from the "scripts" folder on the cluster using sbatch:
+
+```
+sbatch run.sh
+```
+
 
 ## Authors
 
