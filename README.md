@@ -1,6 +1,7 @@
 # Cellular Automata Sand Dune Model
 
 A stochastic, 2D cellular automata model that emulates a sand dune. 
+<br /> Source code link: 
 <br /> https://github.com/jennahorrall/CA_model.git
 
 ## Getting Started
