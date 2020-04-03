@@ -74,7 +74,8 @@ bool transition(int x, int y) {
 	    }
 	}
 
-        // do you have to subtract the actual cell?
+        //subtract current cell
+        livingNeighbors -=  *(cells + x*(MAX_COLS) + y);
 
 	if (*(cells + x*MAX_COLS + y) == 1) {           //Decide if cell will live or perish
 	    return (livingNeighbors == 2 || livingNeighbors == 3);
@@ -147,10 +148,11 @@ int main(int argc, char* argv[])
                if (transition(i,j)) {
                    *(next_transition + i*(MAX_COLS) + j) = 1;
 	       } else {
-                   *(next_transition + i*(MAX_COLS) + j) = *(cells + i*(MAX_COLS) + j);
+                   *(next_transition + i*(MAX_COLS) + j) = 0;
                }
            }
        }
+
        cells = next_transition;
 
        // print cellspace every 10 timesteps.
