@@ -168,5 +168,6 @@ int main(int argc, char* argv[])
     free(cells);
 
     return (EXIT_SUCCESS);
+	
 }
 
