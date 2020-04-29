@@ -7,8 +7,10 @@
  *
  * Dr. Lam: file "timer.h", also used in p3 to calculate runtimes for specific code segments.
  *
- * Implemented by Paul Bailey, Callan Hand, Jenna Horrall to
- * model a stochastic sand dune model similar to ReSCAL.
+ * Authors: Paul Bailey, Jenna Horrall, Callan Hand
+ *
+ * ca_rand_ind: uses a the random independent order scheme to randomize the matrix.
+ * one cell is chosen to be updated at random each time step. 
  *
  */
 
@@ -17,8 +19,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
-#include "queue.h"
-
 #include "timer.h"
 
 int ROWS;
@@ -27,20 +27,21 @@ int COLS;
 int MAX_ROWS;
 int MAX_COLS;
 
+bool debug_mode = false;
+
 /*global matrix*/
 int *cells;
+int timesteps;
 
 void initialize();
 bool transition(int, int);
 void print_cellspace(int*, int);
+void ca_routine();
 
-// srand(time(0));
 
 /*
  * Randomly generate a matrix of MAX_ROWS x MAX_COLS.
  * Each cell has two possible states: 0 (inactive) or 1 (active).
- *
- *
  */
 void initialize() {
 
@@ -105,6 +106,36 @@ void print_cellspace(int* p, int timestep) {
 
 }
 
+/*
+ * Perform the cellular automata transitions.
+ */
+void ca_routine() {
+
+    int timestep = 0;
+    srand(time(0)); 
+    int r;
+    int c;
+    while (timestep < timesteps) {
+
+        r = (rand() % ((ROWS) - 1 + 1)) + 1;
+        c = (rand() % ((COLS) - 1 + 1)) + 1;
+        if (transition(r,c)) {
+            *(cells + r*(MAX_COLS) + c) = 1;
+        } else {
+            *(cells + r*(MAX_COLS) + c) = 0;
+        }
+
+       if (timestep % 10 == 0 && debug_mode) {
+          print_cellspace(cells, timestep);
+       }
+       timestep++;
+
+    }
+
+
+
+}
+
 
 /*
  * Main routine.
@@ -113,12 +144,13 @@ int main(int argc, char* argv[])
 {
     // check and parse command line options
     if (argc != 3) {
-        printf("Usage: ./ca_model <rows> <cols>\n");
+        printf("Usage: ./ca_model <rows> <cols> <timestep>\n");
         exit(EXIT_FAILURE);
     }
 
     ROWS = atoi(argv[1]);
     COLS = atoi(argv[2]);
+    timesteps = atoi(argv[3]);
 
     if (ROWS < 0 || COLS < 0) {
         printf("ERROR: please enter a positive number for rows and cols.\n");
@@ -128,57 +160,15 @@ int main(int argc, char* argv[])
     /* set max rows/cols for ghost border */
     MAX_ROWS=ROWS+2;
     MAX_COLS=COLS+2;
-
     cells = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
 
-    int timestep = 0;
-
-
     START_TIMER(ca);
-
     initialize();
-
-
-    srand(time(0));
-    int r;
-    int c;
-
-    // loop for 50 time steps
-    while (timestep <= 1000) {
-
-
-        r = (rand() % ((ROWS) - 1 + 1)) + 1;
-        c = (rand() % ((COLS) - 1 + 1)) + 1;
-
-
-               if (transition(r,c)) {
-                   *(cells + r*(MAX_COLS) + c) = 1;
-               } else {
-                   *(cells + r*(MAX_COLS) + c) = 0;
-               }
-
-
-
-       // print cellspace every 10 timesteps.
-       if (timestep % 10 == 0) {
-       //    print_cellspace(cells, timestep);
-       }
-
-       timestep++;
-
-    }
-
-    // print_cellspace(cells, timestep);
-
+    ca_routine();
     STOP_TIMER(ca);
 
-    printf("time for serial program: %4.4fs\n", GET_TIMER(ca));
-//    free(next_transition);
-
+    printf("time for asynchronous random independent program: %4.4fs\n", GET_TIMER(ca));
     free(cells);
-
-    // free(next_transition);
-
     return (EXIT_SUCCESS);
 
 }

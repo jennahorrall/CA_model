@@ -7,11 +7,17 @@
  *
  * Dr. Lam: file "timer.h", also used in p3 to calculate runtimes for specific code segments.
  *
- * to run: mpirun -np 4 ./ca_model 10 10
+ * to run: mpirun -np 4 ./ca_mpi <rows> <cols> <timesteps>
  *
+ * Authors: Paul Bailey, Jenna Horrall, Callan Hand
  *
- * Implemented by Paul Bailey, Callan Hand, Jenna Horrall to
- * model a stochastic sand dune model similar to ReSCAL.
+ * ca_mpi: Parallel implementation of the synchronous ca model using MPI. The global
+ * matrix is split up among processes and gathered into the global array at the 
+ * end of each timestep.
+ *
+ * ca_mpi_omp: Hybrid parallel implementation of the synchronous ca model using MPI and OpenMP.
+ * The global matrix is distributed among procs and within each proc, the updates are
+ * parallelized using OpenMP.
  *
  */
 
@@ -20,9 +26,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
-#include "queue.h"
 #include <string.h>
-
 #include "timer.h"
 #include <mpi.h>
 
@@ -41,7 +45,6 @@ int nprocs;
 
 bool debug = false;
 
-/*global matrix*/
 int *global_cells;
 int *local_cells;
 
@@ -57,7 +60,6 @@ void err_check();
 /*
  * Randomly generate a matrix of MAX_ROWS x MAX_COLS.
  * Each cell has two possible states: 0 (inactive) or 1 (active).
- *
  *
  */
 void initialize()
@@ -87,7 +89,6 @@ bool transition(int x, int y)
 {
 
     int livingNeighbors = 0;
-
     for (int nRows = x - 1; nRows <= x + 1; nRows++) {     //Count Living Neighbors
         for (int nCols = y - 1; nCols <= y + 1; nCols++) {
             if (*(global_cells + nRows*MAX_COLS + nCols) == 1) {
@@ -131,10 +132,9 @@ void print_cellspace(int* p, int timestep, int rows, int cols)
 
 
 /*
- * Print the cellspace.
+ * Print the entire cellspace including the ghost border.
  *
- * Notice the for loop is from [1, maxrows-1]:
- * this is because of the ghost border.
+ * 
  */
 void print_full_cellspace(int* p, int timestep, int rows, int cols)
 {
@@ -150,9 +150,13 @@ void print_full_cellspace(int* p, int timestep, int rows, int cols)
 
 }
 
+/*
+ * Perform the main cellular automata transition loop.
+ */
 void ca_routine()
 {
 
+    // distribute cells among procs
     if (MPI_Scatter(global_cells, ((MAX_ROWS / nprocs) * MAX_COLS), MPI_INT,
                     local_cells, ((MAX_ROWS / nprocs) * MAX_COLS), MPI_INT,
                     0, MPI_COMM_WORLD) != MPI_SUCCESS) {
@@ -168,6 +172,7 @@ void ca_routine()
 
     while (begin_time < timesteps) {
 
+        // compute indices in global array
         if (my_rank == 0) {
             start_rows = 1;
             end_rows = MAX_ROWS / nprocs;
@@ -205,7 +210,7 @@ void ca_routine()
             exit(1);
         }
 
-
+        // print matrix if debug mode is on
         if (my_rank == 0 && begin_time % 10 == 0 && debug) {
             print_cellspace(global_cells, begin_time, MAX_ROWS, MAX_COLS);
         }
@@ -220,7 +225,9 @@ void ca_routine()
 
 }
 
-
+/*
+ * Check to make sure num rows is valid.
+ */
 void err_check() {
 
     if ((ROWS+2) % nprocs != 0) {
@@ -236,7 +243,6 @@ void err_check() {
 
     }
 }
-
 
 
 
@@ -260,11 +266,11 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-
     /* set max rows/cols for ghost border */
     MAX_ROWS=ROWS+2;
     MAX_COLS=COLS+2;
 
+    // allocate memory for global cell matrix
     global_cells = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
 
     MPI_Init(&argc, &argv);
@@ -273,6 +279,7 @@ int main(int argc, char* argv[])
 
     err_check();
 
+    // allocate mem for local arrays
     local_cells = (int*) calloc(((MAX_ROWS / nprocs) * MAX_COLS), sizeof(int));
 
     // start time and perform main CA loop
@@ -287,7 +294,11 @@ int main(int argc, char* argv[])
     free(global_cells);
     MPI_Finalize();
     if (my_rank == 0) {
-        printf("time for parallel program: %4.4fs\n", GET_TIMER(ca));
+        #ifdef _OPENMP
+        printf("time for synchronous MPI/OpenMP hybrid program: %4.4fs\n", GET_TIMER(ca));
+        #else
+        printf("time for synchronous MPI program: %4.4fs\n", GET_TIMER(ca));
+        #endif
     }
     return (EXIT_SUCCESS);
 }

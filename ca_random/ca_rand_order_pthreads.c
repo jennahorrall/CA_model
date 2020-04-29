@@ -7,8 +7,11 @@
  * 
  * Dr. Lam: file "timer.h", also used in p3 to calculate runtimes for specific code segments.
  *
- * Implemented by Paul Bailey, Callan Hand, Jenna Horrall to 
- * model a stochastic sand dune model similar to ReSCAL.
+ * Authors: Paul Bailey, Jenna Horrall, Callan Hand
+ *
+ * ca_rand_order_pthreads: uses the random order scheme to randomize the matrix.
+ * every cell is updated each timestep but in random order. this implementation
+ * attempts to use pthreads to parallelize the transitions.
  *
  */
 
@@ -17,10 +20,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
-#include "queue.h"
 #include <string.h>
 #include <pthread.h>
-
 #include "timer.h"
 
 int ROWS;
@@ -32,14 +33,15 @@ int MAX_COLS;
 int timesteps;
 bool debug = false;
 
-/*global matrix*/
 int *global_cells;
-int* visited;
+int *visited;
 int visited_cells = 0;
 
 void initialize();
 bool transition(int, int);
+void* worker(void* arg);
 void print_cellspace(int*, int);
+void ca_routine();
 
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
@@ -52,7 +54,6 @@ pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 void initialize() {
 
     srand(time(0));
-
     for (int x = 0; x < MAX_ROWS; x++) {
         for (int y = 0; y < MAX_COLS; y++) {
                // set to outer layer to all 1's to account for border cell transitions
@@ -95,40 +96,31 @@ bool transition(int x, int y) {
 
 }
 
-
+/*
+ * Worker thread function.
+ */
 void* worker(void* arg) {
 
     int row_rand = 0;
     int col_rand = 0;
-//    printf("thread has been created\n");
     while (visited_cells < ROWS*COLS) {
-
             row_rand = (rand() % ((ROWS) - 1 + 1)) + 1;
             col_rand = (rand() % ((COLS) - 1 + 1)) + 1;
-
- 
-          //  printf("first random number in thread: [%d][%d]\n", row_rand, col_rand);  
-            // if the cell hasn't been seen yet, do transition and move on
             pthread_mutex_lock(&mut);
             if (*(visited + row_rand*(MAX_COLS) + col_rand) == 0) {
-
                *(visited + row_rand*(MAX_COLS) + col_rand) = 1;
-
                if (transition(row_rand,col_rand)) {
                    *(global_cells + row_rand*(MAX_COLS) + col_rand) = 1;
                } else {
                    *(global_cells + row_rand*(MAX_COLS) + col_rand) = 0;
                }
                visited_cells++;
-
             }
             pthread_mutex_unlock(&mut);
 
     }
-
     return NULL;
 }
-
 
 
 /*
@@ -151,17 +143,15 @@ void print_cellspace(int* p, int timestep) {
 }
 
 
-void main_routine() {
+/*
+ * Perform the cellular automata transition routine.
+ */
+void ca_routine() {
 
     int time = 0;
-//    int row_rand = 0;
-//    int col_rand = 0;
-
-
     while (time < timesteps) {
  
         visited_cells = 0;
-
         memset(visited, 0, (MAX_ROWS * MAX_COLS* sizeof(int)));
 
             //initialize and create threads
@@ -169,8 +159,6 @@ void main_routine() {
             for (int i = 0; i < 8; i++) {
                 pthread_create(&thread_handler[i], NULL, worker, (void*)0);
             }
-
-
              // clean up threads and free allocated memory
              for (int i = 0; i < 8; i++) {
                  pthread_join(thread_handler[i], NULL);
@@ -185,11 +173,7 @@ void main_routine() {
 
     }
 
-
 }
-
-
-
 
 
 /*
@@ -221,13 +205,13 @@ int main(int argc, char* argv[])
 
     START_TIMER(ca);
     initialize();
-    main_routine();
+    ca_routine();
     STOP_TIMER(ca);
 
-    printf("time for parallel random program: %4.4fs\n", GET_TIMER(ca));
+    /* clean up and exit */
+    printf("time for asynchronous random order program using pthreads: %4.4fs\n", GET_TIMER(ca));
     free(global_cells);
     free(visited);
-
     return (EXIT_SUCCESS);
 }
 

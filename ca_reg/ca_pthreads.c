@@ -7,8 +7,10 @@
  * 
  * Dr. Lam: file "timer.h", also used in p3 to calculate runtimes for specific code segments.
  *
- * Implemented by Paul Bailey, Callan Hand, Jenna Horrall to 
- * model a stochastic sand dune model similar to ReSCAL.
+ * Authors: Paul Bailey, Jenna Horrall, Callan Hand
+ *
+ * ca_pthreads: Parallel implementation of the synchronous ca model using pthreads. 
+ * The updates of the global cellspace are split among worker threads.
  *
  */
 
@@ -17,16 +19,16 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
-#include "queue.h"
 #include <pthread.h>
-
 #include "timer.h"
 
 int ROWS;
 int COLS;
-
 int MAX_ROWS;
 int MAX_COLS;
+
+bool debug_mode = false;
+int timesteps;
 
 /*global matrix*/
 int *cells;
@@ -131,13 +133,14 @@ int main(int argc, char* argv[])
     pthread_t* thread_handles;
 
     // check and parse command line options
-    if (argc != 4) {
-        printf("Usage: ./ca_model <rows> <cols> <threads>\n");
+    if (argc != 5) {
+        printf("Usage: ./ca_model <rows> <cols> <timesteps> <threads>\n");
         exit(EXIT_FAILURE);
     }
    
     ROWS = atoi(argv[1]);
     COLS = atoi(argv[2]);
+    timesteps = atoi(argv[3]);
 
     if (ROWS < 0 || COLS < 0) {
         printf("ERROR: please enter a positive number for rows and cols.\n");
@@ -149,12 +152,11 @@ int main(int argc, char* argv[])
     MAX_COLS=COLS+2;
 
     cells = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
-
     next_transition = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
 
 
-        // determine number of threads
-    thread_count = strtol(argv[3], NULL, 10);
+    // determine number of threads
+    thread_count = strtol(argv[4], NULL, 10);
     if (thread_count < 1) {
         printf("ERROR: thread_count must be greater than 0\n");
         exit(EXIT_FAILURE);
@@ -164,42 +166,35 @@ int main(int argc, char* argv[])
     }
     thread_handles = malloc (thread_count*sizeof(pthread_t));
 
-	//Set up barrier for threads to use between timesteps.
+    // set up barrier for threads to use between timesteps.
     printf("thread_count : %d\n", thread_count);
     if (pthread_barrier_init(&barrier_p, NULL, thread_count) != 0) {
         printf("ERROR: could not initialize the barrier\n");
         exit(EXIT_FAILURE);
     }
 
-
     START_TIMER(ca);
     initialize();
-
-
     for (thread = 0; thread < thread_count; thread++) {
         pthread_create(&thread_handles[thread], NULL, worker, (void*) thread);
     }
-
     for (thread = 0; thread < thread_count; thread++) {
         pthread_join(thread_handles[thread], NULL);
     }
-
-
-
     STOP_TIMER(ca);
 
-    printf("time for serial program: %4.4fs\n", GET_TIMER(ca));
+    // print results, clean up, and exit
+    printf("time for synchronous pthreads program: %4.4fs\n", GET_TIMER(ca));
     free(cells);
     free(thread_handles);
     destroy_barrier(&barrier_p);
     destroy(&nextTran_mutex);    
-
     return (EXIT_SUCCESS);
 	
 }
 
 
-// ================== THREAD FUNCTION ===============
+/* ================== THREAD FUNCTION =============== */
 
 void* worker(void* rank) {
 
@@ -208,43 +203,34 @@ void* worker(void* rank) {
 
     int myStart = (my_rank * (ROWS/thread_count)) + 1;
     int myEnd = myStart + (ROWS/thread_count);
-
     int timestep = 0;
 
         
-    // loop for 50 time steps
-    while (timestep <= 50) {
+    // loop for x time steps
+    while (timestep <= timesteps) {
 
-
-       // CURRENTLY REMOVED MUTEX LOCKING.      
        for (int i = myStart; i < myEnd; i++) {
            for (int j = 1; j < MAX_COLS-1; j++) {
-//		usleep(10000);
                // if cell can move, perform transition else keep previous value
                if (transition(i,j)) {
-//                   lock(&nextTran_mutex);
 		   *(next_transition + i*(MAX_COLS) + j) = 1;
-//                   unlock(&nextTran_mutex);
 	       } else {
-//                   lock(&nextTran_mutex);
                    *(next_transition + i*(MAX_COLS) + j) = 0;
-//                   unlock(&nextTran_mutex);
                }
     	   }
        }
 
-	// BARRIER HERE
+       // wait for all threads to finish updates
        barrier_wait(&barrier_p);
 
-	// Rank 0 resets the cells grid to the next transition
+       // set the cells grid to the next transition
        if (rank == 0) {
 	   lock(&nextTran_mutex);
        	   cells = next_transition;
            unlock(&nextTran_mutex);
 
-           // print cellspace every 10 timesteps.
-           if (timestep % 10 == 0) {
-//               print_cellspace(cells, timestep);
+           if (timestep % 10 == 0 && debug_mode) {
+               print_cellspace(cells, timestep);
            }
        }
        timestep++;
@@ -256,8 +242,9 @@ void* worker(void* rank) {
 
 
 
-// ================= Function Wrappers ===============
+/* ================= Function Wrappers =============== */
 
+// lock mutex
 void lock(pthread_mutex_t *mut) {
     if (pthread_mutex_lock(mut) != 0) {
         printf("ERROR: could not acquire mutex\n");
@@ -265,6 +252,7 @@ void lock(pthread_mutex_t *mut) {
     }
 }
 
+// unlock mutex
 void unlock(pthread_mutex_t *mut) {
     if (pthread_mutex_unlock(mut) != 0) {
         printf("ERROR: could not acquire mutex\n");
@@ -272,6 +260,7 @@ void unlock(pthread_mutex_t *mut) {
     }
 }
 
+// barrier wait
 void barrier_wait(pthread_barrier_t *bar) {
     int returnVal = pthread_barrier_wait(bar);
     if (!(returnVal != 0 || returnVal != PTHREAD_BARRIER_SERIAL_THREAD)) {
@@ -280,6 +269,7 @@ void barrier_wait(pthread_barrier_t *bar) {
     }
 }
 
+// destroy mutex
 void destroy(pthread_mutex_t *mut) {
     if (pthread_mutex_destroy(mut) != 0) {
         printf("ERROR: could not destroy the mutex\n");
@@ -287,6 +277,7 @@ void destroy(pthread_mutex_t *mut) {
     }
 }
 
+// destroy barrier
 void destroy_barrier(pthread_barrier_t *bar) {
     if (pthread_barrier_destroy(bar) != 0) {
         printf("ERROR: could not destroy the barrier\n");

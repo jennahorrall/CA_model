@@ -7,8 +7,11 @@
  * 
  * Dr. Lam: file "timer.h", also used in p3 to calculate runtimes for specific code segments.
  *
- * Implemented by Paul Bailey, Callan Hand, Jenna Horrall to 
- * model a stochastic sand dune model similar to ReSCAL.
+ * Authors: Paul Bailey, Jenna Horrall, Callan Hand
+ *
+ * ca_rand_order_serial: uses the random order scheme to randomize the matrix.
+ * every cell is updated each timestep but in random order. this implementation
+ * is serial and uses no parallelization techniques.
  *
  */
 
@@ -17,7 +20,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <stdbool.h>
-#include "queue.h"
 #include <string.h>
 #include <pthread.h>
 
@@ -39,12 +41,11 @@ int* visited;
 void initialize();
 bool transition(int, int);
 void print_cellspace(int*, int);
+void ca_routine();
 
 /*
  * Randomly generate a matrix of MAX_ROWS x MAX_COLS.
  * Each cell has two possible states: 0 (inactive) or 1 (active).
- * 
- *
  */
 void initialize() {
 
@@ -93,9 +94,6 @@ bool transition(int x, int y) {
 }
 
 
-
-
-
 /*
  * Print the cellspace.
  *
@@ -116,7 +114,10 @@ void print_cellspace(int* p, int timestep) {
 }
 
 
-void main_routine() {
+/* 
+ * Perform the cellular automata transitions.
+ */
+void ca_routine() {
 
     int time = 0;
     int row_rand = 0;
@@ -127,24 +128,19 @@ void main_routine() {
  
         visited_cells = 0;
         memset(visited, 0, (MAX_ROWS * MAX_COLS* sizeof(int)));
-
         while (visited_cells < ROWS*COLS) {
-
             row_rand = (rand() % ((ROWS) - 1 + 1)) + 1;
             col_rand = (rand() % ((COLS) - 1 + 1)) + 1;
 
-            // if the cell hasn't been seen yet, do transition and move on
+            // update visited matrix and cells in global matrix    
             if (*(visited + row_rand*(MAX_COLS) + col_rand) == 0) {
-
                *(visited + row_rand*(MAX_COLS) + col_rand) = 1;
-
                if (transition(row_rand,col_rand)) {
                    *(global_cells + row_rand*(MAX_COLS) + col_rand) = 1;
                } else {
                    *(global_cells + row_rand*(MAX_COLS) + col_rand) = 0;
                }
                visited_cells++;
-
             }
 
         }
@@ -152,16 +148,10 @@ void main_routine() {
       if (time % 10 == 0 && debug) {
           print_cellspace(global_cells, time);
       }
-
       time++;
-
     }
 
-
 }
-
-
-
 
 
 /*
@@ -188,18 +178,18 @@ int main(int argc, char* argv[])
     MAX_ROWS=ROWS+2;
     MAX_COLS=COLS+2;
 
+    /* allocate memory for matrices */
     global_cells = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
     visited = (int*) calloc((MAX_ROWS * MAX_COLS), sizeof(int));
 
     START_TIMER(ca);
     initialize();
-    main_routine();
+    ca_routine();
     STOP_TIMER(ca);
 
-    printf("time for parallel random program: %4.4fs\n", GET_TIMER(ca));
+    printf("time for asynchronous random order program: %4.4fs\n", GET_TIMER(ca));
     free(global_cells);
     free(visited);
-
     return (EXIT_SUCCESS);
 }
 
