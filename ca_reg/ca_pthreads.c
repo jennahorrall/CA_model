@@ -134,7 +134,7 @@ int main(int argc, char* argv[])
 
     // check and parse command line options
     if (argc != 5) {
-        printf("Usage: ./ca_model <rows> <cols> <timesteps> <threads>\n");
+        printf("Usage: ./ca_pthreads <rows> <cols> <timesteps> <threads>\n");
         exit(EXIT_FAILURE);
     }
    
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
     if (thread_count < 1) {
         printf("ERROR: thread_count must be greater than 0\n");
         exit(EXIT_FAILURE);
-    } else if ((ROWS % thread_count) != 0) {
+    } else if ((MAX_ROWS % thread_count) != 0) {
 	printf("ERROR: please use thread_count that divides Rows\n");
 	exit(EXIT_FAILURE);
     }

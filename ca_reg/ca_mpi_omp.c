@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
 {
     // check and parse command line options
     if (argc != 4) {
-        printf("Usage: ./ca_model <rows> <cols> <timesteps> \n");
+        printf("Usage: ./ca_mpi <rows> <cols> <timesteps> \n");
         exit(EXIT_FAILURE);
     }
 

@@ -143,7 +143,7 @@ void ca_routine() {
 int main(int argc, char* argv[])
 {
     // check and parse command line options
-    if (argc != 3) {
+    if (argc != 4) {
         printf("Usage: ./ca_model <rows> <cols> <timestep>\n");
         exit(EXIT_FAILURE);
     }

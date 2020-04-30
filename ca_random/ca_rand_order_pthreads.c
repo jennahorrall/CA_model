@@ -41,7 +41,7 @@ void initialize();
 bool transition(int, int);
 void* worker(void* arg);
 void print_cellspace(int*, int);
-void ca_routine();
+void ca_routine(int);
 
 pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
 
@@ -146,7 +146,7 @@ void print_cellspace(int* p, int timestep) {
 /*
  * Perform the cellular automata transition routine.
  */
-void ca_routine() {
+void ca_routine(int threads) {
 
     int time = 0;
     while (time < timesteps) {
@@ -155,12 +155,12 @@ void ca_routine() {
         memset(visited, 0, (MAX_ROWS * MAX_COLS* sizeof(int)));
 
             //initialize and create threads
-            pthread_t* thread_handler = (pthread_t*)calloc(8, sizeof(pthread_t));
-            for (int i = 0; i < 8; i++) {
+            pthread_t* thread_handler = (pthread_t*)calloc(threads, sizeof(pthread_t));
+            for (int i = 0; i < threads; i++) {
                 pthread_create(&thread_handler[i], NULL, worker, (void*)0);
             }
              // clean up threads and free allocated memory
-             for (int i = 0; i < 8; i++) {
+             for (int i = 0; i < threads; i++) {
                  pthread_join(thread_handler[i], NULL);
              }
 
@@ -182,14 +182,15 @@ void ca_routine() {
 int main(int argc, char* argv[])
 {
     // check and parse command line options
-    if (argc != 4) {
-        printf("Usage: ./ca_model <rows> <cols> <timesteps> \n");
+    if (argc != 5) {
+        printf("Usage: ./ca_model <rows> <cols> <timesteps> <nthreads>\n");
         exit(EXIT_FAILURE);
     }
    
     ROWS = atoi(argv[1]);
     COLS = atoi(argv[2]);
     timesteps = atoi(argv[3]);
+    int nthreads = atoi(argv[4]);
 
     if (ROWS < 0 || COLS < 0) {
         printf("ERROR: please enter a positive number for rows and cols.\n");
@@ -205,7 +206,7 @@ int main(int argc, char* argv[])
 
     START_TIMER(ca);
     initialize();
-    ca_routine();
+    ca_routine(nthreads);
     STOP_TIMER(ca);
 
     /* clean up and exit */
