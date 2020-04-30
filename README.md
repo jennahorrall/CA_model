@@ -66,7 +66,7 @@ To run these executables:
 
 Keep in mind that the "rand_ord_pthreads" executable expects an extra argument for the amount of threads.
 
-If you would like to run our scripts for large arrays, we have made sbatch scripts available. To run these scripts, make sure you are on a cluster machine and run the following command:
+If you would like to run our scripts for large matrices, we have made sbatch scripts available. To run these scripts, make sure you are on a cluster machine and run the following command using an sbatch script:
 
 ```
 sbatch <script.sh>
