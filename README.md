@@ -44,7 +44,7 @@ To run these different executables:
 
 ```
 mpirun -np <nprocs> ./ca_mpi <rows> <cols> <timesteps>
-mpirun -np <nprocs> ./ <rows> <cols> <timesteps>
+mpirun -np <nprocs> ./ca_mpi_omp <rows> <cols> <timesteps>
 ./ca_serial <rows> <cols> <timesteps>
 ./ca_pthreads <rows> <cols> <timesteps> <nthreads>
 ```
